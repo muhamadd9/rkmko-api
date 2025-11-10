@@ -6,6 +6,7 @@ import { signupSchema, loginSchema, resetPasswordSchema } from "./auth.validatio
 
 const authRouter = Router();
 
+
 authRouter.post("/signup", validate(signupSchema), authService.signup);
 authRouter.post("/login", validate(loginSchema), authService.login);
 authRouter.post("/forgot-password", authService.forgotPassword);
