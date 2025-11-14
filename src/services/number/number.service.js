@@ -47,15 +47,32 @@ export const getAllNumbers = asyncHandler(async (req, res) => {
   const limit = Math.max(parseInt(req.query.limit) || 1000, 1);
   const skip = (page - 1) * limit;
 
-  // Helper function to count zeros in phone number
-  const countZeros = (phoneNumber) => {
+  // Helper function to count consecutive zeros after "010"
+  const countConsecutiveZerosAfter010 = (phoneNumber) => {
     if (!phoneNumber) return 0;
-    // Remove dots and spaces, then count zeros
+    // Remove dots and spaces
     const cleaned = phoneNumber.toString().replace(/[.\s]/g, '');
-    return (cleaned.match(/0/g) || []).length;
+
+    // Check if number starts with "010"
+    if (!cleaned.startsWith('010')) return 0;
+
+    // Get the part after "010"
+    const after010 = cleaned.substring(3);
+
+    // Count consecutive zeros from the start
+    let count = 0;
+    for (let i = 0; i < after010.length; i++) {
+      if (after010[i] === '0') {
+        count++;
+      } else {
+        break; // Stop at first non-zero
+      }
+    }
+
+    return count;
   };
 
-  // Fetch all numbers first (we need to sort by zero count, which requires all data)
+  // Fetch all numbers first (we need to sort by consecutive zeros, which requires all data)
   const [count, allNumbers] = await getAll({
     model: NumberModel,
     filter: {},
@@ -64,14 +81,14 @@ export const getAllNumbers = asyncHandler(async (req, res) => {
     sort: {},
   });
 
-  // Sort by zero count (descending - more zeros first), then by createdAt (newest first) as secondary sort
+  // Sort by consecutive zeros after "010" (descending - more consecutive zeros first), then by createdAt (newest first) as secondary sort
   const sortedNumbers = allNumbers.sort((a, b) => {
-    const zerosA = countZeros(a.phoneNumber);
-    const zerosB = countZeros(b.phoneNumber);
+    const consecutiveZerosA = countConsecutiveZerosAfter010(a.phoneNumber);
+    const consecutiveZerosB = countConsecutiveZerosAfter010(b.phoneNumber);
 
-    // Primary sort: by zero count (descending)
-    if (zerosB !== zerosA) {
-      return zerosB - zerosA;
+    // Primary sort: by consecutive zeros count (descending)
+    if (consecutiveZerosB !== consecutiveZerosA) {
+      return consecutiveZerosB - consecutiveZerosA;
     }
 
     // Secondary sort: by createdAt (newest first)
